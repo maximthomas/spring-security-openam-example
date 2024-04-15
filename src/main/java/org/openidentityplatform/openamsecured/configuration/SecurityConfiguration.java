@@ -2,6 +2,7 @@ package org.openidentityplatform.openamsecured.configuration;
 
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -16,6 +17,16 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
+
+    private final String openAmRealm;
+    private final String jwtSecretKey;
+
+    public SecurityConfiguration(@Value("${openam.auth.realm:/}") String openAmRealm,
+                                 @Value("${openam.jwt.secret-key}") String jwtSecretKey) {
+        this.openAmRealm = openAmRealm;
+        this.jwtSecretKey = jwtSecretKey;
+    }
+
     @Bean
     @Order(1)
     @Profile("oauth")
@@ -80,16 +91,13 @@ public class SecurityConfiguration {
         return http.build();
     }
 
-    @Bean
-    @Profile("cookie")
     public OpenAmAuthenticationFilter openAmAuthenticationFilter() {
-        return new OpenAmAuthenticationFilter(openAmAuthenticationManager());
+        return new OpenAmAuthenticationFilter(openAmRealm, openAmAuthenticationManager());
     }
 
-    @Bean
-    @Profile("jwt")
+
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(openAmAuthenticationManager());
+        return new JwtAuthenticationFilter(jwtSecretKey, openAmAuthenticationManager());
     }
 
     @Bean

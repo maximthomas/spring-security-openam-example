@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -31,15 +30,16 @@ public class OpenAmAuthenticationFilter extends BasicAuthenticationFilter {
     private final String openAmUrl = "http://openam.example.org:8080/openam";
     private final String openAuthUrl = openAmUrl.concat("/XUI/");
 
-    private String openamRealm = "/";
+    private final String openAmRealm;
 
     private final String openAmUserInfoUrl = openAmUrl.concat("/json/users?_action=idFromSession");
     private final String openAmCookieName = "iPlanetDirectoryPro";
 
     private final String redirectUrl = "http://app.example.org:8081/protected-openam";
 
-    public OpenAmAuthenticationFilter(AuthenticationManager authenticationManager) {
+    public OpenAmAuthenticationFilter(String openAmRealm, AuthenticationManager authenticationManager) {
         super(authenticationManager);
+        this.openAmRealm = openAmRealm;
     }
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -48,7 +48,7 @@ public class OpenAmAuthenticationFilter extends BasicAuthenticationFilter {
                 .filter(c -> c.getName().equals(openAmCookieName)).findFirst();
         if(openamCookie.isEmpty()) {
             response.sendRedirect(openAuthUrl + "?goto=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8)
-                    + "&realm=".concat(URLEncoder.encode(openamRealm, StandardCharsets.UTF_8)));
+                    + "&realm=".concat(URLEncoder.encode(openAmRealm, StandardCharsets.UTF_8)));
         } else {
             String userId = getUserIdFromSession(openamCookie.get().getValue());
             if (userId == null) {
@@ -74,10 +74,5 @@ public class OpenAmAuthenticationFilter extends BasicAuthenticationFilter {
             return null;
         }
         return body.get("id");
-    }
-
-    @Value("${openam.auth.realm:/}")
-    public void setOpenamRealm(String openamRealm) {
-        this.openamRealm = openamRealm;
     }
 }

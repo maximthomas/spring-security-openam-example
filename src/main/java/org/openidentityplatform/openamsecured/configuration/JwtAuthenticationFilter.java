@@ -9,7 +9,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -24,10 +23,11 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
     public static final String AUTH_HEADER_PREFIX = "Bearer ";
     public static final String AUTH_HEADER = "Authorization";
 
-    private String secretKeyStr;
+    private final String jwtSecretKey;
 
-    public JwtAuthenticationFilter(AuthenticationManager authenticationManager) {
+    public JwtAuthenticationFilter(String jwtSecretKey, AuthenticationManager authenticationManager) {
         super(authenticationManager);
+        this.jwtSecretKey = jwtSecretKey;
     }
 
     @Override
@@ -58,14 +58,9 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
 
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = this.secretKeyStr.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = this.jwtSecretKey.getBytes(StandardCharsets.UTF_8);
         keyBytes = Bytes.ensureCapacity(keyBytes , 256/8, 0);
         String jwtAlg = "HMACSHA256";
         return new SecretKeySpec(keyBytes, jwtAlg);
-    }
-
-    @Value("${openam.jwt.secret-key}")
-    public void setSecretKeyStr(String secretKeyStr) {
-        this.secretKeyStr = secretKeyStr;
     }
 }
