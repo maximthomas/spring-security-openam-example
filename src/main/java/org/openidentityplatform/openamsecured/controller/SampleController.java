@@ -36,4 +36,11 @@ public class SampleController {
         model.addAttribute("method", "OpenAM Cookie");
         return "protected";
     }
+
+    @GetMapping("/protected-jwt")
+    public String jwtProtected(Model model, @AuthenticationPrincipal String principal) {
+        model.addAttribute("userName", principal);
+        model.addAttribute("method", "JWT");
+        return "protected";
+    }
 }

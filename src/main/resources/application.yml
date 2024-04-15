@@ -3,6 +3,8 @@ server:
 openam:
   auth:
     realm: "/"
+  jwt:
+    secret-key: "changeme"
 logging:
   level:
     org:

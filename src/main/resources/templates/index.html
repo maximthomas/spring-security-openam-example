@@ -10,6 +10,7 @@
     <li th:if="${#arrays.contains(@environment.getActiveProfiles(), 'oauth')}"><a href="/protected-oauth">OAuth2/OIDC</a></li>
     <li th:if="${#arrays.contains(@environment.getActiveProfiles(), 'saml')}"><a href="/protected-saml">SAMLv2</a></li>
     <li th:if="${#arrays.contains(@environment.getActiveProfiles(), 'cookie')}"><a href="/protected-openam">OpenAM Cookie</a></li>
+    <li th:if="${#arrays.contains(@environment.getActiveProfiles(), 'jwt')}"><a href="/protected-jwt">JWT</a></li>
 </ul>
 </body>
 </html>

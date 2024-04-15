@@ -1,5 +1,7 @@
 package org.openidentityplatform.openamsecured.configuration;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,13 +12,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationDetailsSource;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -25,8 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
-public class OpenAmAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
+public class OpenAmAuthenticationFilter extends BasicAuthenticationFilter {
 
     private final String openAmUrl = "http://openam.example.org:8080/openam";
     private final String openAuthUrl = openAmUrl.concat("/XUI/");
@@ -38,31 +38,25 @@ public class OpenAmAuthenticationFilter extends AbstractAuthenticationProcessing
 
     private final String redirectUrl = "http://app.example.org:8081/protected-openam";
 
-    public static final String OPENAM_AUTH_URI = "/openam-auth";
-
-    public OpenAmAuthenticationFilter() {
-        super(OPENAM_AUTH_URI, new OpenAmAuthenticationManager());
-        setSecurityContextRepository(new HttpSessionSecurityContextRepository());
+    public OpenAmAuthenticationFilter(AuthenticationManager authenticationManager) {
+        super(authenticationManager);
     }
-
-    private final AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource = new WebAuthenticationDetailsSource();
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-            throws AuthenticationException, IOException {
-        Optional<Cookie> openamCookie = Arrays.stream(request.getCookies())
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        Optional<Cookie> openamCookie =
+                (request.getCookies() != null ? Arrays.stream(request.getCookies()) : Stream.<Cookie>empty())
                 .filter(c -> c.getName().equals(openAmCookieName)).findFirst();
         if(openamCookie.isEmpty()) {
-           response.sendRedirect(openAuthUrl + "?goto=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8)
-                   + "&realm=".concat(URLEncoder.encode(openamRealm, StandardCharsets.UTF_8)));
-           return null;
+            response.sendRedirect(openAuthUrl + "?goto=" + URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8)
+                    + "&realm=".concat(URLEncoder.encode(openamRealm, StandardCharsets.UTF_8)));
         } else {
             String userId = getUserIdFromSession(openamCookie.get().getValue());
             if (userId == null) {
                 throw new BadCredentialsException("invalid session!");
             }
             OpenAmAuthenticationToken token = new OpenAmAuthenticationToken(userId);
-            token.setDetails(authenticationDetailsSource.buildDetails(request));
-            return this.getAuthenticationManager().authenticate(token);
+            SecurityContextHolder.getContext().setAuthentication(getAuthenticationManager().authenticate(token));
+            filterChain.doFilter(request, response);
         }
     }
 
@@ -86,6 +80,4 @@ public class OpenAmAuthenticationFilter extends AbstractAuthenticationProcessing
     public void setOpenamRealm(String openamRealm) {
         this.openamRealm = openamRealm;
     }
-
-
 }

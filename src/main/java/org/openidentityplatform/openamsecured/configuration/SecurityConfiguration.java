@@ -1,6 +1,7 @@
 package org.openidentityplatform.openamsecured.configuration;
 
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -43,13 +44,27 @@ public class SecurityConfiguration {
     @Order(3)
     @Profile("cookie")
     public SecurityFilterChain securityOpenAmFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/protected-openam", OpenAmAuthenticationFilter.OPENAM_AUTH_URI)
+        http.securityMatcher("/protected-openam")
                 .addFilterAt(openAmAuthenticationFilter(), RememberMeAuthenticationFilter.class)
                 .authorizeHttpRequests((authorize) ->
                         authorize.anyRequest().fullyAuthenticated())
                 .exceptionHandling(e ->
                         e.authenticationEntryPoint((request, response, authException) ->
-                                response.sendRedirect(OpenAmAuthenticationFilter.OPENAM_AUTH_URI)));
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)));
+        return http.build();
+    }
+
+    @Bean
+    @Order(4)
+    @Profile("jwt")
+    public SecurityFilterChain securityJwtFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/protected-jwt", "/api/protected-jwt")
+                .addFilterAt(jwtAuthenticationFilter(), RememberMeAuthenticationFilter.class)
+                .authorizeHttpRequests((authorize) ->
+                        authorize.anyRequest().fullyAuthenticated())
+                .exceptionHandling(e ->
+                        e.authenticationEntryPoint((request, response, authException) ->
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED)));
         return http.build();
     }
 
@@ -66,8 +81,20 @@ public class SecurityConfiguration {
     }
 
     @Bean
+    @Profile("cookie")
     public OpenAmAuthenticationFilter openAmAuthenticationFilter() {
-        return new OpenAmAuthenticationFilter();
+        return new OpenAmAuthenticationFilter(openAmAuthenticationManager());
+    }
+
+    @Bean
+    @Profile("jwt")
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(openAmAuthenticationManager());
+    }
+
+    @Bean
+    OpenAmAuthenticationManager openAmAuthenticationManager() {
+        return new OpenAmAuthenticationManager();
     }
 }
 
