@@ -8,6 +8,6 @@
 <h1>Protected resource</h1>
 <a th:if="${#arrays.contains(@environment.getActiveProfiles(), 'oauth')
     || #arrays.contains(@environment.getActiveProfiles(), 'saml')}" href="/logout">Back</a>
-<p>User: <span th:text="${userName}"/>; authenticated via <span th:text="${method}"/></p>
+<p>User: <span th:text="${userName}"/>; authenticated with <span th:text="${method}"/></p>
 </body>
 </html>
